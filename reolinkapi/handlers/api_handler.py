@@ -1,4 +1,5 @@
 import requests
+import time
 from typing import Dict, List, Optional, Union
 from reolinkapi.mixins.alarm import AlarmAPIMixin
 from reolinkapi.mixins.device import DeviceAPIMixin
@@ -142,3 +143,50 @@ class APIHandler(AlarmAPIMixin,
         except Exception as e:
             print(f"Command {command} failed: {e}")
             raise
+
+    def _execute_command_with_timing(self, command: str, data: List[Dict], multi: bool = False) -> \
+        tuple[Optional[Union[Dict, bool]], float, Optional[int]]:
+        """
+        Send a POST request to the IP camera with given data and return timing information.
+        :param command: name of the command to send
+        :param data: object to send to the camera (send as json)
+        :param multi: whether the given command name should be added to the
+        url parameters of the request. Defaults to False.
+        :return: tuple containing (response data, time elapsed in seconds, status code)
+        """
+        params = {"token": self.token, 'cmd': command}
+        if multi:
+            del params['cmd']
+        try:
+            if self.token is None:
+                raise ValueError("Login first")
+            
+            start_time = time.time()
+            
+            if command == 'Download' or command == 'Playback':
+                # Special handling for downloading an mp4
+                # Pop the filepath from data
+                tgt_filepath = data[0].pop('filepath')
+                # Apply the data to the params
+                params.update(data[0])
+                
+                with requests.get(self.url, params=params, stream=True, verify=False, timeout=(1, None), proxies=Request.proxies) as req:
+                    end_time = time.time()
+                    status_code = req.status_code
+                    
+                    if status_code == 200:
+                        with open(tgt_filepath, 'wb') as f:
+                            f.write(req.content)
+                        return True, end_time - start_time, status_code
+                    else:
+                        print(f'Error received: {status_code}')
+                        return False, end_time - start_time, status_code
+            else:
+                response = Request.post(self.url, data=data, params=params)
+                end_time = time.time()
+                return response.json(), end_time - start_time, response.status_code
+                
+        except Exception as e:
+            end_time = time.time()
+            print(f"Command {command} failed: {e}")
+            return None, end_time - start_time, None

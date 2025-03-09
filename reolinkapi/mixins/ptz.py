@@ -154,3 +154,67 @@ class PtzAPIMixin:
         :return: response json
         """
         return self._send_operation('Auto', speed=speed)
+    
+    def _send_operation_with_time(self, operation: str, speed: float, index: float = None) -> float:
+        """
+        Send operation command and return the time it took to receive a response
+        :return: time elapsed in seconds
+        """
+        param = {"channel": 0, "op": operation, "speed": speed}
+        if index is not None:
+            param['id'] = index
+        data = [{"cmd": "PtzCtrl", "action": 0, "param": param}]
+        _, elapsed_time, _ = self._execute_command_with_timing('PtzCtrl', data)
+        return elapsed_time
+    
+    def _send_noparm_operation_with_time(self, operation: str) -> Dict:
+        data = [{"cmd": "PtzCtrl", "action": 0, "param": {"channel": 0, "op": operation}}]
+        _, elapsed_time, _ = self._execute_command_with_timing('PtzCtrl', data)
+        return elapsed_time
+
+    def move_left_with_time(self, speed: float = 25) -> float:
+        """
+        Move the camera to the left and return the time it took to receive a response
+        The camera moves until self.stop_ptz() is called.
+        :return: time elapsed in seconds
+        """
+        return self._send_operation_with_time('Left', speed=speed)
+
+    def move_right_with_time(self, speed: float = 25) -> float:
+        """
+        Move the camera to the right and return the time it took to receive a response
+        The camera moves until self.stop_ptz() is called.
+        :return: time elapsed in seconds
+        """
+        return self._send_operation_with_time('Right', speed=speed)
+
+    def move_up_with_time(self, speed: float = 25) -> float:
+        """
+        Move the camera up and return the time it took to receive a response
+        The camera moves until self.stop_ptz() is called.
+        :return: time elapsed in seconds
+        """
+        return self._send_operation_with_time('Up', speed=speed)
+
+    def move_down_with_time(self, speed: float = 25) -> float:
+        """
+        Move the camera down and return the time it took to receive a response
+        The camera moves until self.stop_ptz() is called.
+        :return: time elapsed in seconds
+        """
+        return self._send_operation_with_time('Down', speed=speed)
+
+    def move_left_up_with_time(self, speed: float = 25) -> float:
+        """
+        Move the camera to the left and up and return the time it took to receive a response
+        The camera moves until self.stop_ptz() is called.
+        :return: time elapsed in seconds
+        """
+        return self._send_operation_with_time('LeftUp', speed=speed)
+    
+    def stop_ptz_with_time(self) -> Dict:
+        """
+        Stops the cameras current action.
+        :return: response json
+        """
+        return self._send_noparm_operation_with_time('Stop')
